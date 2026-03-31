@@ -100,22 +100,27 @@ def get_config():
 
 
 @app.post("/api/process")
-async def process_statement(file: UploadFile = File(...)):
-    data = await file.read()
-    filename = file.filename or ""
+async def process_statement(files: list[UploadFile] = File(...)):
+    all_transactions = []
 
-    if filename.lower().endswith(".pdf"):
-        text = extract_text_from_pdf(data)
-    elif filename.lower().endswith(".csv"):
-        text = extract_text_from_csv(data)
-    else:
-        raise HTTPException(status_code=400, detail="Only PDF and CSV files are supported.")
+    for file in files:
+        data = await file.read()
+        filename = file.filename or ""
 
-    if not text.strip():
-        raise HTTPException(status_code=422, detail="Could not extract any text from the file.")
+        if filename.lower().endswith(".pdf"):
+            text = extract_text_from_pdf(data)
+        elif filename.lower().endswith(".csv"):
+            text = extract_text_from_csv(data)
+        else:
+            raise HTTPException(status_code=400, detail=f"{filename}: only PDF and CSV files are supported.")
 
-    transactions = categorize_with_claude(text)
-    return JSONResponse(content={"transactions": transactions})
+        if not text.strip():
+            raise HTTPException(status_code=422, detail=f"{filename}: could not extract any text.")
+
+        transactions = categorize_with_claude(text)
+        all_transactions.extend(transactions)
+
+    return JSONResponse(content={"transactions": all_transactions})
 
 
 @app.post("/api/export")

@@ -391,10 +391,10 @@
 <main>
 
   <div class="upload-area" id="upload-area">
-    <input type="file" id="file-input" accept=".pdf,.csv" />
+    <input type="file" id="file-input" accept=".pdf,.csv" multiple />
     <span class="upload-icon">📄</span>
-    <h2>Drop your statement here</h2>
-    <p>Supports Chase PDF statements and CSV exports from any bank</p>
+    <h2>Drop your statements here</h2>
+    <p>Supports Chase PDF statements and CSV exports — drop multiple files at once</p>
     <div class="file-name hidden" id="file-name"></div>
   </div>
 
@@ -445,7 +445,7 @@
 
 <script>
 let transactions = [];
-let selectedFile = null;
+let selectedFiles = [];
 
 // Load sheet URL from backend config
 fetch('/api/config').then(r => r.json()).then(cfg => {
@@ -477,13 +477,13 @@ uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag
 uploadArea.addEventListener('drop', e => {
   e.preventDefault();
   uploadArea.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files));
 });
-fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files.length) handleFiles(Array.from(e.target.files)); });
 
-function handleFile(file) {
-  selectedFile = file;
-  fileNameEl.textContent = '📎 ' + file.name;
+function handleFiles(files) {
+  selectedFiles = files;
+  fileNameEl.innerHTML = files.map(f => `📎 ${f.name}`).join('<br>');
   fileNameEl.classList.remove('hidden');
   processBtn.disabled = false;
 }
@@ -491,9 +491,9 @@ function handleFile(file) {
 // ── PROCESS ────────────────────────────────────────────────────────────────
 
 processBtn.addEventListener('click', async () => {
-  if (!selectedFile) return;
+  if (!selectedFiles.length) return;
 
-  setStatus('processing', 'Uploading statement…');
+  setStatus('processing', `Uploading ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}…`);
   processBtn.disabled = true;
   resetBtn.classList.remove('hidden');
   progressBar.classList.remove('hidden');
@@ -501,7 +501,7 @@ processBtn.addEventListener('click', async () => {
 
   try {
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    selectedFiles.forEach(f => formData.append('files', f));
 
     setStatus('processing', 'Categorizing with AI…');
     setProgress(50);
@@ -615,7 +615,7 @@ exportBtn.addEventListener('click', async () => {
 // ── RESET ──────────────────────────────────────────────────────────────────
 
 resetBtn.addEventListener('click', () => {
-  selectedFile = null;
+  selectedFiles = [];
   transactions = [];
   fileInput.value = '';
   fileNameEl.classList.add('hidden');
