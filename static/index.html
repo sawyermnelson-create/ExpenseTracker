@@ -432,7 +432,7 @@
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect width="20" height="20" rx="3" fill="#0F9D58"/><rect x="4" y="5" width="12" height="1.5" rx=".75" fill="white"/><rect x="4" y="8.5" width="12" height="1.5" rx=".75" fill="white"/><rect x="4" y="12" width="8" height="1.5" rx=".75" fill="white"/></svg>
           Export to Google Sheets
         </h3>
-        <p>Sends all categorized transactions to the shared spreadsheet.</p>
+        <p>Sends all categorized transactions to the shared spreadsheet. <a id="sheet-link" href="#" target="_blank" style="color:#2d6a4f;font-weight:500;display:none;">Open Sheet ↗</a></p>
       </div>
       <button class="btn-green" id="export-btn">↗ Export to Sheet</button>
     </div>
@@ -446,6 +446,15 @@
 <script>
 let transactions = [];
 let selectedFile = null;
+
+// Load sheet URL from backend config
+fetch('/api/config').then(r => r.json()).then(cfg => {
+  if (cfg.sheet_url) {
+    const link = document.getElementById('sheet-link');
+    link.href = cfg.sheet_url;
+    link.style.display = 'inline';
+  }
+});
 
 const uploadArea  = document.getElementById('upload-area');
 const fileInput   = document.getElementById('file-input');

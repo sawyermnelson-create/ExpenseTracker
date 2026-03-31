@@ -93,6 +93,12 @@ def root():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/api/config")
+def get_config():
+    sheet_url = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/edit" if GOOGLE_SHEET_ID else ""
+    return JSONResponse(content={"sheet_url": sheet_url})
+
+
 @app.post("/api/process")
 async def process_statement(file: UploadFile = File(...)):
     data = await file.read()
