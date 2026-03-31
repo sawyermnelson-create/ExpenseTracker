@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expense Categorizer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a18;
+    --paper: #f5f2eb;
+    --cream: #ede9df;
+    --rule: #c8c2b4;
+    --accent: #c85a2a;
+    --accent-light: #f0e0d6;
+    --food: #4a7c59;
+    --transport: #2a5c8a;
+    --supplies: #7a4a8a;
+    --irrelevant: #8a7a6a;
+    --food-bg: #e8f4ec;
+    --transport-bg: #e0ecf4;
+    --supplies-bg: #f0e8f4;
+    --irrelevant-bg: #f0ece8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  header {
+    border-bottom: 2px solid var(--ink);
+    padding: 28px 48px 20px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    background: var(--paper);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    letter-spacing: -0.02em;
+  }
+
+  header .subtitle {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid var(--accent);
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+
+  header .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  main {
+    padding: 32px 48px 80px;
+    max-width: 1200px;
+  }
+
+  .upload-area {
+    border: 2px dashed var(--rule);
+    border-radius: 8px;
+    padding: 56px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+    margin-bottom: 32px;
+    position: relative;
+  }
+
+  .upload-area:hover, .upload-area.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+
+  .upload-area input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+
+  .upload-area h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+  }
+
+  .upload-area p { color: #888; font-size: 0.85rem; }
+
+  .upload-area .file-name {
+    margin-top: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 14px 32px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary:hover { background: #333; transform: translateY(-1px); }
+  .btn-primary:disabled { background: var(--rule); cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: white;
+    color: var(--ink);
+    border: 1.5px solid var(--ink);
+    padding: 12px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-secondary:hover { background: var(--cream); }
+  .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-green {
+    background: #2d6a4f;
+    color: white;
+    border: none;
+    padding: 14px 32px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-green:hover { background: #1e4d38; transform: translateY(-1px); }
+  .btn-green:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .action-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .status {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status.processing { color: var(--accent); }
+  .status.success { color: var(--food); }
+  .status.error { color: #c0392b; }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--rule);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--accent-light);
+    border-radius: 2px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .table-wrapper {
+    background: white;
+    border: 1.5px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+
+  thead th {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 500;
+  }
+
+  tbody tr { border-bottom: 1px solid var(--cream); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #faf9f6; }
+
+  td { padding: 10px 16px; vertical-align: middle; }
+
+  .td-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: #888;
+    white-space: nowrap;
+    width: 80px;
+  }
+
+  .td-merchant { font-weight: 400; max-width: 320px; }
+
+  .td-amount {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    text-align: right;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  .td-category { width: 180px; }
+
+  .cat-select {
+    border: none;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 24px;
+    outline: none;
+    width: 100%;
+    transition: all 0.15s;
+  }
+
+  .cat-food      { background: var(--food-bg);       color: var(--food);       }
+  .cat-transport { background: var(--transport-bg);  color: var(--transport);  }
+  .cat-supplies  { background: var(--supplies-bg);   color: var(--supplies);   }
+  .cat-irrelevant{ background: var(--irrelevant-bg); color: var(--irrelevant); }
+
+  .summary-strip { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+
+  .summary-card {
+    flex: 1;
+    min-width: 140px;
+    background: white;
+    border: 1.5px solid var(--rule);
+    border-radius: 8px;
+    padding: 16px 20px;
+  }
+
+  .summary-card .cat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+
+  .summary-card .cat-total { font-family: 'DM Serif Display', serif; font-size: 1.4rem; }
+  .summary-card .cat-count { font-size: 0.75rem; color: #999; margin-top: 2px; }
+
+  .export-section {
+    background: white;
+    border: 1.5px solid var(--rule);
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .export-section h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .export-section p {
+    font-size: 0.82rem;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 14px 20px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-family: 'DM Sans', sans-serif;
+    display: none;
+    z-index: 999;
+    max-width: 320px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+
+  .toast.show { display: block; animation: slideUp 0.3s ease; }
+  .toast.green { background: #2d6a4f; }
+  .toast.red   { background: #c0392b; }
+
+  @keyframes slideUp {
+    from { transform: translateY(12px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 640px) {
+    header, main { padding-left: 20px; padding-right: 20px; }
+    .summary-card { min-width: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Expense Categorizer</h1>
+  <span class="subtitle">Prop Stylist Edition</span>
+  <div class="header-right">
+    <span class="status" id="header-status"></span>
+  </div>
+</header>
+
+<main>
+
+  <div class="upload-area" id="upload-area">
+    <input type="file" id="file-input" accept=".pdf,.csv" />
+    <span class="upload-icon">📄</span>
+    <h2>Drop your statement here</h2>
+    <p>Supports Chase PDF statements and CSV exports from any bank</p>
+    <div class="file-name hidden" id="file-name"></div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn-primary" id="process-btn" disabled>✦ Categorize Expenses</button>
+    <button class="btn-secondary hidden" id="reset-btn">↩ Start Over</button>
+    <div class="status hidden" id="process-status"></div>
+  </div>
+
+  <div class="progress-bar hidden" id="progress-bar">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+
+  <div id="results-section" class="hidden">
+
+    <div class="summary-strip" id="summary-strip"></div>
+
+    <div class="table-wrapper">
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Merchant</th>
+            <th style="text-align:right">Amount</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+
+    <div class="export-section">
+      <div>
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect width="20" height="20" rx="3" fill="#0F9D58"/><rect x="4" y="5" width="12" height="1.5" rx=".75" fill="white"/><rect x="4" y="8.5" width="12" height="1.5" rx=".75" fill="white"/><rect x="4" y="12" width="8" height="1.5" rx=".75" fill="white"/></svg>
+          Export to Google Sheets
+        </h3>
+        <p>Sends all categorized transactions to the shared spreadsheet.</p>
+      </div>
+      <button class="btn-green" id="export-btn">↗ Export to Sheet</button>
+    </div>
+
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let transactions = [];
+let selectedFile = null;
+
+const uploadArea  = document.getElementById('upload-area');
+const fileInput   = document.getElementById('file-input');
+const fileNameEl  = document.getElementById('file-name');
+const processBtn  = document.getElementById('process-btn');
+const resetBtn    = document.getElementById('reset-btn');
+const statusEl    = document.getElementById('process-status');
+const progressBar = document.getElementById('progress-bar');
+const progressFill= document.getElementById('progress-fill');
+const resultsSection = document.getElementById('results-section');
+const resultsBody = document.getElementById('results-body');
+const summaryStrip = document.getElementById('summary-strip');
+const exportBtn   = document.getElementById('export-btn');
+const toast       = document.getElementById('toast');
+
+// ── UPLOAD ─────────────────────────────────────────────────────────────────
+
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  selectedFile = file;
+  fileNameEl.textContent = '📎 ' + file.name;
+  fileNameEl.classList.remove('hidden');
+  processBtn.disabled = false;
+}
+
+// ── PROCESS ────────────────────────────────────────────────────────────────
+
+processBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+
+  setStatus('processing', 'Uploading statement…');
+  processBtn.disabled = true;
+  resetBtn.classList.remove('hidden');
+  progressBar.classList.remove('hidden');
+  setProgress(20);
+
+  try {
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    setStatus('processing', 'Categorizing with AI…');
+    setProgress(50);
+
+    const res = await fetch('/api/process', { method: 'POST', body: formData });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Server error');
+    }
+
+    const data = await res.json();
+    transactions = data.transactions;
+
+    setProgress(90);
+    renderTable(transactions);
+    renderSummary(transactions);
+    resultsSection.classList.remove('hidden');
+    setProgress(100);
+    setTimeout(() => progressBar.classList.add('hidden'), 600);
+    setStatus('success', `✓ ${transactions.length} transactions categorized`);
+
+  } catch (err) {
+    setStatus('error', '✗ ' + err.message);
+    showToast('Error: ' + err.message, 'red');
+    setProgress(0);
+    setTimeout(() => progressBar.classList.add('hidden'), 400);
+    processBtn.disabled = false;
+  }
+});
+
+// ── TABLE ──────────────────────────────────────────────────────────────────
+
+function catClass(cat) {
+  if (cat === 'Food') return 'cat-food';
+  if (cat === 'Transportation') return 'cat-transport';
+  if (cat === 'Supplies') return 'cat-supplies';
+  return 'cat-irrelevant';
+}
+
+function renderTable(txns) {
+  resultsBody.innerHTML = '';
+  txns.forEach((t, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-date">${t.date}</td>
+      <td class="td-merchant">${escHtml(t.merchant)}</td>
+      <td class="td-amount">$${Number(t.amount).toFixed(2)}</td>
+      <td class="td-category">
+        <select class="cat-select ${catClass(t.category)}" data-idx="${i}">
+          <option value="Food"           ${t.category==='Food'?'selected':''}>Food</option>
+          <option value="Transportation" ${t.category==='Transportation'?'selected':''}>Transportation</option>
+          <option value="Supplies"       ${t.category==='Supplies'?'selected':''}>Supplies</option>
+          <option value="Not Relevant"   ${t.category==='Not Relevant'?'selected':''}>Not Relevant</option>
+        </select>
+      </td>`;
+    resultsBody.appendChild(tr);
+    tr.querySelector('select').addEventListener('change', function() {
+      transactions[this.dataset.idx].category = this.value;
+      this.className = `cat-select ${catClass(this.value)}`;
+      renderSummary(transactions);
+    });
+  });
+}
+
+function renderSummary(txns) {
+  const cats = ['Food','Transportation','Supplies','Not Relevant'];
+  summaryStrip.innerHTML = cats.map(cat => {
+    const items = txns.filter(t => t.category === cat);
+    const total = items.reduce((s, t) => s + Number(t.amount), 0);
+    const cls = catClass(cat);
+    return `<div class="summary-card">
+      <div class="cat-label ${cls}" style="color:var(--${cls.replace('cat-','')})">${cat}</div>
+      <div class="cat-total">$${total.toFixed(2)}</div>
+      <div class="cat-count">${items.length} transaction${items.length!==1?'s':''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── EXPORT ─────────────────────────────────────────────────────────────────
+
+exportBtn.addEventListener('click', async () => {
+  if (!transactions.length) return;
+
+  exportBtn.disabled = true;
+  exportBtn.textContent = 'Exporting…';
+
+  try {
+    const res = await fetch('/api/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transactions }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Export failed');
+    }
+
+    const data = await res.json();
+    showToast(`✓ ${data.rows_written} rows exported to Google Sheets!`, 'green');
+  } catch (err) {
+    showToast('Export error: ' + err.message, 'red');
+  }
+
+  exportBtn.disabled = false;
+  exportBtn.textContent = '↗ Export to Sheet';
+});
+
+// ── RESET ──────────────────────────────────────────────────────────────────
+
+resetBtn.addEventListener('click', () => {
+  selectedFile = null;
+  transactions = [];
+  fileInput.value = '';
+  fileNameEl.classList.add('hidden');
+  processBtn.disabled = true;
+  resetBtn.classList.add('hidden');
+  resultsSection.classList.add('hidden');
+  progressBar.classList.add('hidden');
+  setProgress(0);
+  setStatus('', '');
+  resultsBody.innerHTML = '';
+  summaryStrip.innerHTML = '';
+});
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+
+function setStatus(type, msg) {
+  statusEl.className = `status ${type}`;
+  if (!msg) { statusEl.classList.add('hidden'); return; }
+  statusEl.classList.remove('hidden');
+  statusEl.innerHTML = type === 'processing' ? `<span class="spinner"></span> ${msg}` : msg;
+}
+
+function setProgress(pct) { progressFill.style.width = pct + '%'; }
+
+function showToast(msg, type = '') {
+  toast.textContent = msg;
+  toast.className = `toast show${type ? ' ' + type : ''}`;
+  setTimeout(() => toast.className = 'toast', 3500);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
