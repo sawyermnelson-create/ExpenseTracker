@@ -109,13 +109,41 @@
 
   .upload-area p { color: #888; font-size: 0.85rem; }
 
-  .upload-area .file-name {
+  .file-list {
     margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+  }
+
+  .file-list-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 5px 10px;
     font-family: 'DM Mono', monospace;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--accent);
     font-weight: 500;
   }
+
+  .file-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--accent);
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 0;
+    opacity: 0.6;
+    transition: opacity 0.1s;
+  }
+
+  .file-remove:hover { opacity: 1; }
 
   .btn-primary {
     background: var(--ink);
@@ -395,7 +423,7 @@
     <span class="upload-icon">📄</span>
     <h2>Drop your statements here</h2>
     <p>Supports Chase PDF statements and CSV exports — you can drop multiple files at once</p>
-    <div class="file-name hidden" id="file-name"></div>
+    <div class="file-list hidden" id="file-list"></div>
   </div>
 
   <div class="action-bar">
@@ -458,7 +486,7 @@ fetch('/api/config').then(r => r.json()).then(cfg => {
 
 const uploadArea  = document.getElementById('upload-area');
 const fileInput   = document.getElementById('file-input');
-const fileNameEl  = document.getElementById('file-name');
+const fileListEl  = document.getElementById('file-list');
 const processBtn  = document.getElementById('process-btn');
 const resetBtn    = document.getElementById('reset-btn');
 const statusEl    = document.getElementById('process-status');
@@ -481,10 +509,33 @@ uploadArea.addEventListener('drop', e => {
 });
 fileInput.addEventListener('change', e => { if (e.target.files.length) handleFiles(Array.from(e.target.files)); });
 
-function handleFiles(files) {
-  selectedFiles = files;
-  fileNameEl.innerHTML = files.map(f => `📎 ${f.name}`).join('<br>');
-  fileNameEl.classList.remove('hidden');
+function handleFiles(newFiles) {
+  // Append only files not already in the list (by name)
+  const existing = new Set(selectedFiles.map(f => f.name));
+  newFiles.forEach(f => { if (!existing.has(f.name)) selectedFiles.push(f); });
+  renderFileList();
+}
+
+function renderFileList() {
+  if (!selectedFiles.length) {
+    fileListEl.classList.add('hidden');
+    processBtn.disabled = true;
+    return;
+  }
+  fileListEl.classList.remove('hidden');
+  fileListEl.innerHTML = selectedFiles.map((f, i) => `
+    <div class="file-list-item">
+      📎 ${escHtml(f.name)}
+      <button class="file-remove" data-idx="${i}" title="Remove">✕</button>
+    </div>`).join('');
+  fileListEl.querySelectorAll('.file-remove').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      selectedFiles.splice(Number(btn.dataset.idx), 1);
+      fileInput.value = '';
+      renderFileList();
+    });
+  });
   processBtn.disabled = false;
 }
 
@@ -618,7 +669,8 @@ resetBtn.addEventListener('click', () => {
   selectedFiles = [];
   transactions = [];
   fileInput.value = '';
-  fileNameEl.classList.add('hidden');
+  fileListEl.classList.add('hidden');
+  fileListEl.innerHTML = '';
   processBtn.disabled = true;
   resetBtn.classList.add('hidden');
   resultsSection.classList.add('hidden');
