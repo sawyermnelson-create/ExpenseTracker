@@ -110,7 +110,8 @@
   .upload-area p { color: #888; font-size: 0.85rem; }
 
   .file-list {
-    margin-top: 16px;
+    margin-top: -20px;
+    margin-bottom: 24px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -423,8 +424,8 @@
     <span class="upload-icon">📄</span>
     <h2>Drop your statements here</h2>
     <p>Supports Chase PDF statements and CSV exports — you can drop multiple files at once</p>
-    <div class="file-list hidden" id="file-list"></div>
   </div>
+  <div class="file-list hidden" id="file-list"></div>
 
   <div class="action-bar">
     <button class="btn-primary" id="process-btn" disabled>✦ Categorize Expenses</button>
