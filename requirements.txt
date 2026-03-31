@@ -3,6 +3,7 @@ uvicorn[standard]==0.30.6
 python-multipart==0.0.9
 pdfplumber==0.11.4
 anthropic==0.34.2
+httpx<0.28
 google-auth==2.34.0
 google-api-python-client==2.143.0
 python-dotenv==1.0.1
