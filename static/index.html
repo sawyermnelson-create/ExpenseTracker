@@ -650,7 +650,7 @@ exportBtn.addEventListener('click', async () => {
 
     if (!res.ok) {
       let msg = 'Export failed';
-      try { const err = await res.json(); msg = err.detail || msg; } catch { msg = await res.text() || msg; }
+      try { const body = await res.text(); const err = JSON.parse(body); msg = err.detail || msg; } catch { }
       throw new Error(msg);
     }
 
