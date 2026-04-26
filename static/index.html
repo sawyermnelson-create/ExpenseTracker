@@ -648,13 +648,20 @@ exportBtn.addEventListener('click', async () => {
       body: JSON.stringify({ transactions }),
     });
 
+    const body = await res.text();
     if (!res.ok) {
-      let msg = 'Export failed';
-      try { const body = await res.text(); const err = JSON.parse(body); msg = err.detail || msg; } catch { }
+      let msg = `Export failed (HTTP ${res.status})`;
+      try {
+        const err = JSON.parse(body);
+        if (err.detail) msg = err.detail;
+      } catch {
+        // Body wasn't JSON — surface the first chunk so we can see what happened
+        if (body) msg += ` — ${body.slice(0, 240)}`;
+      }
       throw new Error(msg);
     }
 
-    const data = await res.json();
+    const data = JSON.parse(body);
     showToast(`✓ ${data.rows_written} rows exported to Google Sheets!`, 'green');
   } catch (err) {
     showToast('Export error: ' + err.message, 'red');

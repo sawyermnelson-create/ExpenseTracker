@@ -3,6 +3,7 @@ import io
 import json
 import csv
 import re
+import traceback
 from pathlib import Path
 
 import pdfplumber
@@ -13,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 load_dotenv()
 
@@ -78,12 +80,18 @@ def categorize_with_claude(text: str) -> list:
 def get_sheets_service():
     if not GOOGLE_SERVICE_ACCOUNT_JSON:
         raise HTTPException(status_code=500, detail="Google service account not configured on server.")
-    creds_info = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
-    creds = service_account.Credentials.from_service_account_info(
-        creds_info,
-        scopes=["https://www.googleapis.com/auth/spreadsheets"],
-    )
-    return build("sheets", "v4", credentials=creds)
+    try:
+        creds_info = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Service account JSON is malformed: {e}")
+    try:
+        creds = service_account.Credentials.from_service_account_info(
+            creds_info,
+            scopes=["https://www.googleapis.com/auth/spreadsheets"],
+        )
+        return build("sheets", "v4", credentials=creds, cache_discovery=False)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not initialize Google Sheets client: {e}")
 
 
 # ── ROUTES ─────────────────────────────────────────────────────────────────────
@@ -132,25 +140,43 @@ async def export_to_sheets(payload: dict):
     if not GOOGLE_SHEET_ID:
         raise HTTPException(status_code=500, detail="Google Sheet ID not configured on server.")
 
-    service = get_sheets_service()
-    sheet = service.spreadsheets()
+    try:
+        service = get_sheets_service()
+        sheet = service.spreadsheets()
 
-    header = [["Date", "Merchant", "Amount", "Category"]]
-    rows = [[t.get("date", ""), t.get("merchant", ""), str(t.get("amount", "")), t.get("category", "")] for t in transactions]
-    values = header + rows
+        header = [["Date", "Merchant", "Amount", "Category"]]
+        rows = [[t.get("date", ""), t.get("merchant", ""), str(t.get("amount", "")), t.get("category", "")] for t in transactions]
+        values = header + rows
 
-    range_notation = f"A1:D{len(values)}"
+        # Clear the full A:D range so stale rows from a larger prior export don't linger
+        sheet.values().clear(spreadsheetId=GOOGLE_SHEET_ID, range="A:D").execute()
+        sheet.values().update(
+            spreadsheetId=GOOGLE_SHEET_ID,
+            range="A1",
+            valueInputOption="USER_ENTERED",
+            body={"values": values},
+        ).execute()
 
-    # Clear then write
-    sheet.values().clear(spreadsheetId=GOOGLE_SHEET_ID, range=range_notation).execute()
-    sheet.values().update(
-        spreadsheetId=GOOGLE_SHEET_ID,
-        range="A1",
-        valueInputOption="USER_ENTERED",
-        body={"values": values},
-    ).execute()
+        return JSONResponse(content={"success": True, "rows_written": len(rows)})
 
-    return JSONResponse(content={"success": True, "rows_written": len(rows)})
+    except HTTPException:
+        raise
+    except HttpError as e:
+        traceback.print_exc()
+        status = getattr(e.resp, "status", 500)
+        try:
+            err_body = json.loads(e.content.decode("utf-8"))
+            msg = err_body.get("error", {}).get("message") or str(e)
+        except Exception:
+            msg = str(e)
+        if status == 403:
+            msg = f"Google Sheets denied access (403). Make sure the service account email has Editor access to the sheet. Underlying error: {msg}"
+        elif status == 404:
+            msg = f"Sheet not found (404). Check that GOOGLE_SHEET_ID is correct. Underlying error: {msg}"
+        raise HTTPException(status_code=502, detail=f"Google Sheets API error: {msg}")
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Unexpected export error: {type(e).__name__}: {e}")
 
 
 # Serve static files (fallback)
